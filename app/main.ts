@@ -8,9 +8,20 @@ const command = args[0];
 enum Commands {
     Init = "init",
     Cat_file = "cat-file",
-    Hash_object = "hash-object"
-
+    Hash_object = "hash-object",
+    Ls_tree = "ls-tree"
 }
+
+function readObjectFile(hash: string): string {
+    const dirName = hash.substring(0, 2);
+    const fileName = hash.substring(2);
+    const readPath = ".git/objects/" + dirName + "/" + fileName;
+    const readContentBuffer = fs.readFileSync(readPath);
+    const unzippedData: string = zlib.unzipSync(readContentBuffer).toString();
+    return unzippedData;
+}
+
+
 
 //!For debugging
 //console.log(args);
@@ -37,9 +48,7 @@ switch (command) {
 
         if(argument === '-p')
         {
-            const readPath = ".git/objects/" + dirName + "/" + fielName;
-            const readContentBuffer = fs.readFileSync(readPath); 
-            let unzippedData : string = zlib.unzipSync(readContentBuffer).toString();
+            let unzippedData = readObjectFile(sha1str);
             if(unzippedData.startsWith('blob'))
             {
                 unzippedData = unzippedData.slice(5);
@@ -72,14 +81,52 @@ switch (command) {
             //console.log("\n"+ writePath);
             fs.mkdirSync(".git/objects/" + shasum.slice(0,2), { recursive: true });
             fs.writeFileSync(writePath,zlib.deflateSync(computeString));
-
         }
-
-
         break;
 
-    
+    case Commands.Ls_tree:
+        if(args[1] === "--name-only")
+        {
+            const hash = args[2];
+            let unzippedData = readObjectFile(hash);
+            //console.log(unzippedData);
+            const firstNullIndex = unzippedData.indexOf('\0');
+            const content = unzippedData.slice(firstNullIndex + 1);
 
+            // Process the tree entries
+            const entries = [];
+            let currentIndex = 0;
+            while (currentIndex < content.length) {
+                // Find mode (up to the first space)
+                const spaceIndex = content.indexOf(' ', currentIndex);
+                const mode = content.slice(currentIndex, spaceIndex);
+
+                // Find the null byte after the name (mode <name>\0...)
+                const nameStartIndex = spaceIndex + 1;
+                const nullIndex = content.indexOf('\0', nameStartIndex);
+                const name = content.slice(nameStartIndex, nullIndex);
+
+                console.log(name);
+
+                // Extract the SHA (20 bytes starting after the null byte)
+                const shaStartIndex = nullIndex + 1;
+                const sha = content.slice(shaStartIndex, shaStartIndex + 20);
+
+                // Add this entry to the list
+                entries.push({ mode, name, sha });
+
+                // Move the index to the next entry
+                currentIndex = shaStartIndex + 20;
+            }
+
+            //console.log(entries);
+
+
+
+
+
+        }
+        break;
 
     default:
         throw new Error(`Unknown command ${command}`);

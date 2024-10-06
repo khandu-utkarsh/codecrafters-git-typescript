@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as zlib from 'zlib';
 import * as crypto from 'crypto';
 import * as path from 'path';
-import {readObjectFile, writeObjForFile, writeTreeForDirectory} from "./utils"
+import {readObjectFile, writeObjForFile, writeTreeForDirectory, writeCommitObject} from "./utils"
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -12,7 +12,8 @@ enum Commands {
     CatFile = "cat-file",
     HashObject = "hash-object",
     LsTree = "ls-tree",
-    WriteTree = "write-tree"
+    WriteTree = "write-tree",
+    CommitTree = "commit-tree"
 }
 
 //!For debugging the arguments
@@ -101,6 +102,20 @@ switch (command) {
         //const lsdirInfo = fs.readdirSync(".", {recursive : false});   //!For debugging...
         const treeObjRow = writeTreeForDirectory(process.cwd());
         process.stdout.write(treeObjRow.toString('hex'));
+    break;
+    case Commands.CommitTree:
+    const treeSha = args[1];   //!Tree sha
+    const option = args[2];
+    const parentSHa = args[3];
+    const messageOption = args[4];
+    const message = args[5];
+
+
+    if(option === "-p" && messageOption === "-m")
+    {
+        const commitHash = writeCommitObject(Buffer.from(treeSha, 'hex'), parentSHa, message);
+        console.log(commitHash.toString('hex'));
+    }
     break;
     default:
         throw new Error(`Unknown command ${command}`);

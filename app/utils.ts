@@ -97,10 +97,33 @@ export function writeTreeForDirectory(dir: string) : Buffer
     return hashAndContentToWrite.hash;
 }
 
+export function writeCommitObject(tree: Buffer, parent : string, message : string) : Buffer
+{
+    const timestamp = Math.floor(Date.now() / 1000);
+    const utcOffset = new Date().getTimezoneOffset() * -60;
+    const authorTime = `${timestamp} ${utcOffset >= 0 ? '+' : '-'}${Math.abs(utcOffset) / 3600 | 0}${(Math.abs(utcOffset) % 3600) / 60 | 0}`;
+    const author = 'utk';
 
+    const treeSha1 = tree.toString('hex');
+    let lines = [`tree ${treeSha1}`];
+    if (parent) {
+        lines.push(`parent ${parent}`);
+    }
+    lines.push(`author ${author} ${authorTime}`);
+    lines.push(`committer ${author} ${authorTime}`);
+    lines.push('');
+    lines.push(message);
+    lines.push('');
 
+    const data = lines.join('\n');
 
+    const commitType = Buffer.from('commit');
+    const bufferContent = Buffer.from(data);
 
+    const {hash, contentToWrite} = getHashForContent(commitType, bufferContent);
+    writeObjFile(hash, contentToWrite);
+    return hash
+}
 
 // import * as fs from 'fs';
 // import * as zlib from 'zlib';

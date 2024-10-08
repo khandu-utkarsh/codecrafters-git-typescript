@@ -3,6 +3,7 @@ import * as zlib from 'zlib';
 import * as crypto from 'crypto';
 import * as path from 'path';
 import {readObjectFile, writeObjForFile, writeTreeForDirectory, writeCommitObject} from "./utils"
+import { get } from 'https';
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -13,7 +14,8 @@ enum Commands {
     HashObject = "hash-object",
     LsTree = "ls-tree",
     WriteTree = "write-tree",
-    CommitTree = "commit-tree"
+    CommitTree = "commit-tree",
+    Clone = "clone"
 }
 
 //!For debugging the arguments
@@ -117,6 +119,140 @@ switch (command) {
         console.log(commitHash.toString('hex'));
     }
     break;
+    case Commands.Clone:
+        const url = args[1];
+        const destinationDirectory = args[2];
+
+
+        //!Request to git-upload pack to discover the service.
+        //!Second is the negotiation with the server to get the appropriate packages:
+
+
+
+        const firstReqUrl = `${url}/info/refs?service=git-upload-pack`;
+        const url2 = `${url}/git-upload-pack`;
+        console.log(`Url asked is: ${firstReqUrl}`);
+
+        //To be implemented....
+
+
+
+        //!Implementing GIT HTTP Request
+
+        const options = {headers: {"Git-Protocol": "version=2"}};
+        get(firstReqUrl, options,
+            (incomingMessage) => {
+
+                const responseHeaders = incomingMessage.headers;
+                console.log(`Headers are: `)
+                console.log(responseHeaders);
+                const messageStatusCode = incomingMessage.statusCode;
+
+                let responseBuffer = Buffer.alloc(0);
+
+                let responseBody = '';  // Store the incoming chunks
+
+                // Event listener for receiving data
+                incomingMessage.on('data', (chunk : Buffer) => {
+                    responseBuffer = Buffer.concat([responseBuffer, chunk]);
+                    responseBody += chunk;
+                }); 
+
+                incomingMessage.on('end', () => {
+                    console.log('Response Body:', responseBody);
+                    console.log('Logging buffer');
+                    console.log(responseBuffer);
+                    console.log("\n\nLinesSplitted");
+                    const repsonseLines = responseBody.split('\n');
+                    console.log(`Diff lines count: ${repsonseLines.length}`);
+                    console.log(repsonseLines);
+
+
+                    const totalBytes = responseBuffer.length;
+                    console.log(`Total bytes transfered are: ${totalBytes}`);
+
+                    let currIndex = 0;
+                    const firstFour = responseBuffer.subarray(currIndex, 4);
+                    const totalLineLength = parseInt(firstFour.toString(), 16);                    
+                    console.log(`First four extracted things are: ${firstFour} in interger: ${parseInt(firstFour.toString(), 16)}`);
+                    const extractedLine = responseBuffer.subarray(currIndex, totalLineLength);
+                    console.log(`Extract the next length`);
+                    console.log(extractedLine.toString('hex'));
+                    console.log(extractedLine.toString('base64'));
+                    console.log(extractedLine.toString('utf-8'));
+
+                    // for (const line of repsonseLines) {
+                    //     const bufferLine = Buffer.from(line);
+                    //     const lineLenBytes = bufferLine.subarray(0,4);
+                    //     console.log(`Buffer Line: ${bufferLine} and Length: ${lineLenBytes} ${lineLenBytes.toString()} Testing: ${line.length}`);
+
+                    // }
+
+
+
+
+                    // You can now work with the full response body here
+                    //!I think this is the correct thing for the first message. Need a way to decode the second one. 
+                    //!                    
+
+
+
+                });
+
+
+
+//                console.log(incomingMessage);
+            });
+//        GET $GIT_URL/info/refs?service=git-upload-pack
+
+
+
+        //!Client implementation
+        //!Req 1 --> Run HTTPS GET request to connect to endpoint
+        //Req 2 --> Run HHTPS POST request 
+
+        //!What to do:
+        //1. Using the smart protocol
+        
+
+//         //!Downloading the data
+//         Client will run the fetch pack and server will run the upload-pack
+
+
+//         //!Implementing this
+
+
+//         TTP(S)
+// The handshake for a fetch operation takes two HTTP requests. The first is a GET to the same endpoint used in the dumb protocol:
+
+// => GET $GIT_URL/info/refs?service=git-upload-pack
+// 001e# service=git-upload-pack
+// 00e7ca82a6dff817ec66f44342007202690a93763949 HEAD□multi_ack thin-pack \
+// 	side-band side-band-64k ofs-delta shallow no-progress include-tag \
+// 	multi_ack_detailed no-done symref=HEAD:refs/heads/master \
+// 	agent=git/2:2.1.1+github-607-gfba4028
+// 003fca82a6dff817ec66f44342007202690a93763949 refs/heads/master
+// 0000
+// This is very similar to invoking git-upload-pack over an SSH connection, but the second exchange is performed as a separate request:
+
+// => POST $GIT_URL/git-upload-pack HTTP/1.0
+// 0032want 0a53e9ddeaddad63ad106860237bbf53411d11a7
+// 0032have 441b40d833fdfa93eb2908e52742248faf0ee993
+// 0000
+// Again, this is the same format as above. The response to this request indicates success or failure, and includes the packfile.
+
+
+
+
+
+
+
+
+
+
+
+    break;
+
     default:
         throw new Error(`Unknown command ${command}`);
 }
